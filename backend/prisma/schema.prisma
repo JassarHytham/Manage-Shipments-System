@@ -1,0 +1,167 @@
+generator client {
+  provider                    = "prisma-client-py"
+  interface                   = "asyncio"
+  recursive_type_depth        = 5
+  enable_experimental_decimal = true
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pending
+  shipped
+  delivered
+  returned
+  cancelled
+}
+
+enum Courier {
+  aramex
+  smsa
+}
+
+enum HandoverStatus {
+  pending
+  confirmed
+  disputed
+}
+
+enum ReturnType {
+  replacement_same
+  replacement_different_size
+  refund
+}
+
+enum ReturnStatus {
+  pending
+  replacement_shipped
+  refunded
+  completed
+}
+
+enum UserRole {
+  admin
+  operator
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(255)
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @db.VarChar(255)
+  role          UserRole @default(operator)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  handover_batches HandoverBatch[]
+  returns          ReturnRecord[]        @relation("returned_by")
+
+  @@map("users")
+}
+
+model Order {
+  id             String      @id @default(uuid()) @db.Uuid
+  salla_order_id String?     @unique @db.VarChar(255)
+  customer_name  String      @db.VarChar(255)
+  customer_phone String      @db.VarChar(50)
+  customer_city  String      @db.VarChar(255)
+  total_amount   Decimal     @db.Decimal(10, 2)
+  status         OrderStatus @default(pending)
+  courier        Courier?
+  awb_number     String?     @db.VarChar(255)
+  salla_status   String?     @db.VarChar(255)
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  items          OrderItem[]
+  handover_items HandoverItem[]
+  returns        ReturnRecord[]       @relation("original_order")
+  replacements   ReturnRecord[]       @relation("replacement_order")
+
+  @@index([customer_phone])
+  @@index([customer_name])
+  @@index([status])
+  @@index([courier])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String  @id @default(uuid()) @db.Uuid
+  order_id     String  @db.Uuid
+  product_name String  @db.VarChar(255)
+  sku          String  @db.VarChar(255)
+  size         String? @db.VarChar(50)
+  quantity     Int
+  unit_price   Decimal @db.Decimal(10, 2)
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model HandoverBatch {
+  id            String         @id @default(uuid()) @db.Uuid
+  courier       Courier
+  handed_by     String         @db.Uuid
+  handover_time DateTime       @default(now())
+  your_count    Int            @default(0)
+  courier_count Int?
+  status        HandoverStatus @default(pending)
+  notes         String?        @db.Text
+
+  handed_by_user User           @relation(fields: [handed_by], references: [id])
+  items          HandoverItem[]
+
+  @@map("handover_batches")
+}
+
+model HandoverItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  batch_id   String   @db.Uuid
+  order_id   String   @db.Uuid
+  awb_number String   @db.VarChar(255)
+  scanned_at DateTime @default(now())
+
+  batch HandoverBatch @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  order Order         @relation(fields: [order_id], references: [id])
+
+  @@map("handover_items")
+}
+
+model SallaToken {
+  id            String   @id @default(uuid()) @db.Uuid
+  merchant_id   String   @unique @db.VarChar(255)
+  access_token  String   @db.Text
+  refresh_token String   @db.Text
+  expires_at    DateTime
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("salla_tokens")
+}
+
+model ReturnRecord {
+  id                String       @id @default(uuid()) @db.Uuid
+  original_order_id String       @db.Uuid
+  returned_by       String       @db.Uuid
+  return_type       ReturnType
+  return_reason     String?      @db.VarChar(500)
+  returned_items    Json         @db.JsonB
+  replacement_items Json?        @db.JsonB
+  refund_amount     Decimal?     @db.Decimal(10, 2)
+  new_order_id      String?      @db.Uuid
+  status            ReturnStatus @default(pending)
+  salla_synced      Boolean      @default(false)
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+
+  original_order    Order @relation("original_order", fields: [original_order_id], references: [id])
+  replacement_order Order? @relation("replacement_order", fields: [new_order_id], references: [id])
+  returned_by_user  User  @relation("returned_by", fields: [returned_by], references: [id])
+
+  @@map("returns")
+}
