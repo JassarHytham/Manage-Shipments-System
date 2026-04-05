@@ -11,7 +11,7 @@ import HandoverDetail from "@/pages/HandoverDetail";
 import Returns from "@/pages/Returns";
 import CreateReturn from "@/pages/CreateReturn";
 import ReturnDetail from "@/pages/ReturnDetail";
-import Placeholder from "@/pages/Placeholder";
+import Analytics from "@/pages/Analytics";
 
 export default function App() {
   const { user, loading, login, logout } = useAuth();
@@ -48,7 +48,7 @@ export default function App() {
           <Route path="/returns/new" element={<CreateReturn />} />
           <Route path="/returns/:id" element={<ReturnDetail />} />
           <Route path="/lookup" element={<CustomerLookup />} />
-          <Route path="/analytics" element={<Placeholder title="الإحصائيات" phase="المرحلة 7" />} />
+          <Route path="/analytics" element={<Analytics />} />
         </Route>
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

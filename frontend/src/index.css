@@ -12,8 +12,41 @@ body {
   font-family: var(--font-sans);
   background-color: #f8fafc;
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent pull-to-refresh on mobile (the PWA shell handles navigation) */
+  overscroll-behavior-y: contain;
 }
 
 #root {
   min-height: 100dvh;
+}
+
+/* Safe area for devices with home indicator (iPhone X+) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Tap highlight removal for mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* PWA standalone: hide scrollbar for cleaner mobile feel */
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Re-enable selection on inputs and text content */
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }

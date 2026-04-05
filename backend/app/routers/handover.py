@@ -1,12 +1,16 @@
 """Handover batch API — scan AWBs, confirm handover, reconciliation."""
 from __future__ import annotations
 
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.database import db
 from app.middleware.auth import get_current_user, require_admin
+from app.services.salla import update_salla_order_status
 from app.schemas.handover import (
     BatchListResponse,
     ConfirmBatchRequest,
@@ -141,14 +145,31 @@ async def confirm_batch(
         },
     )
 
-    # If confirmed and courier is aramex, update order statuses to shipped
+    # Update order statuses to shipped and push to Salla
     if new_status == "confirmed":
-        items = await db.handoveritem.find_many(where={"batch_id": batch_id})
+        items = await db.handoveritem.find_many(
+            where={"batch_id": batch_id},
+            include={"order": True},
+        )
         for item in items:
             await db.order.update(
                 where={"id": item.order_id},
                 data={"status": "shipped"},
             )
+            # Auto-push shipped status + AWB to Salla (fixes Aramex gap)
+            order = item.order
+            if order and order.salla_order_id:
+                synced = await update_salla_order_status(
+                    order.salla_order_id, "shipped", item.awb_number
+                )
+                if synced:
+                    logger.info(
+                        f"Salla updated: order {order.salla_order_id} → shipped (AWB: {item.awb_number})"
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to update Salla for order {order.salla_order_id}"
+                    )
 
     return _batch_detail_response(updated)
 

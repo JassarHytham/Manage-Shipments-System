@@ -13,6 +13,20 @@ class Settings(BaseSettings):
     SALLA_REDIRECT_URI: str = ""
     SALLA_WEBHOOK_SECRET: str = ""
 
+    # Aramex (Phase 6)
+    ARAMEX_USERNAME: str = ""
+    ARAMEX_PASSWORD: str = ""
+    ARAMEX_ACCOUNT_NUMBER: str = ""
+    ARAMEX_ACCOUNT_PIN: str = ""
+    ARAMEX_ACCOUNT_ENTITY: str = ""
+    ARAMEX_ACCOUNT_COUNTRY_CODE: str = "SA"
+    ARAMEX_API_URL: str = "https://ws.aramex.net/ShippingAPI.V2"
+
+    # SMSA (Phase 6)
+    SMSA_API_KEY: str = ""
+    SMSA_PASSKEY: str = ""
+    SMSA_API_URL: str = "https://ecomapis.smsaexpress.com"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

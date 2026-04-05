@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowRight, Package, Phone, MapPin, Truck, Hash } from "lucide-react";
+import { ArrowRight, Package, Phone, MapPin, Truck, Hash, Navigation, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
@@ -29,6 +29,13 @@ interface OrderDetail {
   items: OrderItem[];
 }
 
+interface TrackingEvent {
+  description: string;
+  location?: string;
+  datetime: string;
+  code?: string;
+}
+
 const statusMap: Record<string, { label: string; color: string }> = {
   pending: { label: "قيد الانتظار", color: "bg-yellow-100 text-yellow-800" },
   shipped: { label: "تم الشحن", color: "bg-blue-100 text-blue-800" },
@@ -42,6 +49,21 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tracking, setTracking] = useState<TrackingEvent[]>([]);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingOpen, setTrackingOpen] = useState(false);
+
+  const fetchTracking = async (awb: string) => {
+    setTrackingLoading(true);
+    try {
+      const res = await api.get(`/courier/track/${awb}`);
+      setTracking(res.data.tracking || []);
+    } catch {
+      setTracking([]);
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -120,6 +142,68 @@ export default function OrderDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Track shipment button */}
+        {order.awb_number && order.courier && (
+          <div className="mt-3">
+            <button
+              onClick={() => {
+                if (!trackingOpen) {
+                  fetchTracking(order.awb_number!);
+                }
+                setTrackingOpen(!trackingOpen);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
+            >
+              {trackingLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Navigation className="w-4 h-4" />
+              )}
+              {trackingOpen ? "إخفاء التتبع" : "تتبع الشحنة"}
+            </button>
+
+            {trackingOpen && (
+              <div className="mt-3 space-y-2">
+                {trackingLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                  </div>
+                ) : tracking.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-3">
+                    لا توجد بيانات تتبع
+                  </p>
+                ) : (
+                  <div className="border border-slate-100 rounded-lg overflow-hidden">
+                    {tracking.map((event, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-3 p-3 text-sm ${
+                          i !== tracking.length - 1 ? "border-b border-slate-100" : ""
+                        } ${i === 0 ? "bg-indigo-50" : ""}`}
+                      >
+                        <div className="flex-1 text-right">
+                          <p className={`font-medium ${i === 0 ? "text-indigo-700" : "text-slate-700"}`}>
+                            {event.description}
+                          </p>
+                          <div className="flex items-center gap-2 justify-end mt-1 text-xs text-slate-400">
+                            {event.location && <span>{event.location}</span>}
+                            {event.datetime && <span dir="ltr">{event.datetime}</span>}
+                          </div>
+                        </div>
+                        <div
+                          className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                            i === 0 ? "bg-indigo-500" : "bg-slate-300"
+                          }`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
           <span className="text-sm text-slate-400">

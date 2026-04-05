@@ -14,6 +14,11 @@ interface LayoutProps {
   onLogout: () => void;
 }
 
+const roleMap: Record<string, string> = {
+  admin: "مدير",
+  operator: "مشغل",
+};
+
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "الرئيسية" },
   { to: "/handover", icon: ScanBarcode, label: "تسليم الشحنات" },
@@ -32,10 +37,14 @@ export default function Layout({ user, onLogout }: LayoutProps) {
           <span className="font-bold text-lg">Wakkiez</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-300">{user.name}</span>
+          <div className="text-left">
+            <span className="text-sm text-slate-200 block leading-tight">{user.name}</span>
+            <span className="text-xs text-slate-400">{roleMap[user.role] || user.role}</span>
+          </div>
           <button
             onClick={onLogout}
-            className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
+            aria-label="تسجيل الخروج"
           >
             <LogOut className="w-5 h-5" />
           </button>
@@ -48,22 +57,29 @@ export default function Layout({ user, onLogout }: LayoutProps) {
       </main>
 
       {/* Bottom nav — mobile-friendly */}
-      <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-50 safe-area-bottom">
+      <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 z-50 safe-area-bottom">
         <div className="flex justify-around max-w-lg mx-auto">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
+              end={to === "/"}
               className={({ isActive }) =>
-                `flex flex-col items-center py-2 px-3 text-xs transition-colors ${
+                `flex flex-col items-center py-2.5 px-2 min-w-[3.5rem] text-[11px] transition-colors ${
                   isActive
                     ? "text-indigo-600 font-semibold"
-                    : "text-slate-500 hover:text-slate-700"
+                    : "text-slate-400 active:text-slate-600"
                 }`
               }
             >
-              <Icon className="w-5 h-5 mb-0.5" />
-              <span>{label}</span>
+              {({ isActive }) => (
+                <>
+                  <div className={`p-1 rounded-lg ${isActive ? "bg-indigo-50" : ""}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="mt-0.5">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </div>
