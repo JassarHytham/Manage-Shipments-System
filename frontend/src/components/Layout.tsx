@@ -1,12 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Package,
-  Search,
   LogOut,
   LayoutDashboard,
   ScanBarcode,
   Undo2,
   BarChart3,
+  Truck,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -21,10 +21,10 @@ const roleMap: Record<string, string> = {
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "الرئيسية" },
-  { to: "/handover", icon: ScanBarcode, label: "تسليم الشحنات" },
+  { to: "/shipment/new", icon: Truck, label: "شحنة جديدة" },
+  { to: "/handover", icon: ScanBarcode, label: "التسليم" },
   { to: "/returns", icon: Undo2, label: "المرتجعات" },
-  { to: "/lookup", icon: Search, label: "بحث عميل" },
-  { to: "/analytics", icon: BarChart3, label: "الإحصائيات" },
+  { to: "/analytics", icon: BarChart3, label: "إحصائيات" },
 ];
 
 export default function Layout({ user, onLogout }: LayoutProps) {

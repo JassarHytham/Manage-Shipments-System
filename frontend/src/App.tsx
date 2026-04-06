@@ -12,6 +12,7 @@ import Returns from "@/pages/Returns";
 import CreateReturn from "@/pages/CreateReturn";
 import ReturnDetail from "@/pages/ReturnDetail";
 import Analytics from "@/pages/Analytics";
+import CreateShipment from "@/pages/CreateShipment";
 
 export default function App() {
   const { user, loading, login, logout } = useAuth();
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/returns" element={<Returns />} />
           <Route path="/returns/new" element={<CreateReturn />} />
           <Route path="/returns/:id" element={<ReturnDetail />} />
+          <Route path="/shipment/new" element={<CreateShipment />} />
           <Route path="/lookup" element={<CustomerLookup />} />
           <Route path="/analytics" element={<Analytics />} />
         </Route>

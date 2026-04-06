@@ -21,6 +21,9 @@ class OrderResponse(BaseModel):
     customer_name: str
     customer_phone: str
     customer_city: str
+    customer_address: Optional[str] = None
+    customer_district: Optional[str] = None
+    customer_postal_code: Optional[str] = None
     total_amount: float
     status: str
     courier: Optional[str] = None

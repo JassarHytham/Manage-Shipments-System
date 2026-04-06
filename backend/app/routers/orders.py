@@ -14,7 +14,7 @@ from app.schemas.order import (
     OrderResponse,
     OrderStatusUpdate,
 )
-from app.services.salla import update_salla_order_status
+from app.services.salla import salla_api_get, update_salla_order_status
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -62,6 +62,9 @@ async def list_orders(
                 customer_name=o.customer_name,
                 customer_phone=o.customer_phone,
                 customer_city=o.customer_city,
+                customer_address=o.customer_address,
+                customer_district=o.customer_district,
+                customer_postal_code=o.customer_postal_code,
                 total_amount=float(o.total_amount),
                 status=o.status,
                 courier=o.courier,
@@ -94,6 +97,124 @@ async def get_order(order_id: str, _user=Depends(get_current_user)):
         customer_name=order.customer_name,
         customer_phone=order.customer_phone,
         customer_city=order.customer_city,
+        customer_address=order.customer_address,
+        customer_district=order.customer_district,
+        customer_postal_code=order.customer_postal_code,
+        total_amount=float(order.total_amount),
+        status=order.status,
+        courier=order.courier,
+        awb_number=order.awb_number,
+        salla_status=order.salla_status,
+        created_at=order.created_at,
+        updated_at=order.updated_at,
+        items=[
+            OrderItemResponse(
+                id=item.id,
+                product_name=item.product_name,
+                sku=item.sku,
+                size=item.size,
+                quantity=item.quantity,
+                unit_price=float(item.unit_price),
+            )
+            for item in (order.items or [])
+        ],
+    )
+
+
+@router.post("/{order_id}/refresh-address", response_model=OrderDetailResponse)
+async def refresh_address_from_salla(order_id: str, _user=Depends(get_current_user)):
+    """
+    Fetch the latest receiver address from Salla and update the local order.
+    Called when opening the shipment creation form for an order.
+    """
+    order = await db.order.find_unique(where={"id": order_id}, include={"items": True})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Try to pull fresh address from Salla if we have a salla_order_id
+    if order.salla_order_id:
+        try:
+            data = await salla_api_get(f"/orders/{order.salla_order_id}")
+            salla_order = data.get("data", {})
+
+            receiver = salla_order.get("receiver") or {}
+            # Also check shipping address fields
+            shipping = salla_order.get("shipping") or {}
+            ship_addr = shipping.get("address") or {}
+
+            customer = salla_order.get("customer") or {}
+            mobile_code = str(customer.get("mobile_code") or "+966").strip()
+            mobile = str(customer.get("mobile") or "").strip()
+
+            # Build phone with country code if not already prefixed
+            if mobile and not mobile.startswith("+") and not mobile.startswith("00"):
+                full_phone = f"{mobile_code}{mobile}"
+            else:
+                full_phone = mobile or order.customer_phone
+
+            city = (
+                str(receiver.get("city") or "")
+                or str(ship_addr.get("city") or "")
+                or str(customer.get("city") or "")
+                or order.customer_city
+            )
+            address = (
+                str(receiver.get("street") or "")
+                or str(receiver.get("address") or "")
+                or str(ship_addr.get("street") or "")
+                or order.customer_address
+                or ""
+            )
+            district = (
+                str(receiver.get("district") or "")
+                or str(ship_addr.get("block") or "")
+                or order.customer_district
+                or ""
+            )
+            postal_code = (
+                str(receiver.get("postal_code") or "")
+                or str(ship_addr.get("zip_code") or "")
+                or order.customer_postal_code
+                or ""
+            )
+            customer_name = (
+                str(receiver.get("name") or "")
+                or str(customer.get("full_name") or "")
+                or order.customer_name
+            )
+
+            update_data: dict = {}
+            if city and city != order.customer_city:
+                update_data["customer_city"] = city
+            if address and address != order.customer_address:
+                update_data["customer_address"] = address
+            if district and district != order.customer_district:
+                update_data["customer_district"] = district
+            if postal_code and postal_code != order.customer_postal_code:
+                update_data["customer_postal_code"] = postal_code
+            if full_phone and full_phone != order.customer_phone:
+                update_data["customer_phone"] = full_phone
+            if customer_name and customer_name != order.customer_name:
+                update_data["customer_name"] = customer_name
+
+            if update_data:
+                order = await db.order.update(
+                    where={"id": order_id},
+                    data=update_data,
+                    include={"items": True},
+                )
+        except Exception:
+            pass  # Fall through with whatever we have locally
+
+    return OrderDetailResponse(
+        id=order.id,
+        salla_order_id=order.salla_order_id,
+        customer_name=order.customer_name,
+        customer_phone=order.customer_phone,
+        customer_city=order.customer_city,
+        customer_address=order.customer_address,
+        customer_district=order.customer_district,
+        customer_postal_code=order.customer_postal_code,
         total_amount=float(order.total_amount),
         status=order.status,
         courier=order.courier,

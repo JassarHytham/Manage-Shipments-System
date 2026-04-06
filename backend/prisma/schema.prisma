@@ -69,6 +69,9 @@ model Order {
   customer_name  String      @db.VarChar(255)
   customer_phone String      @db.VarChar(50)
   customer_city  String      @db.VarChar(255)
+  customer_address String?   @db.VarChar(500)
+  customer_district String?  @db.VarChar(255)
+  customer_postal_code String? @db.VarChar(20)
   total_amount   Decimal     @db.Decimal(10, 2)
   status         OrderStatus @default(pending)
   courier        Courier?

@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     ARAMEX_ACCOUNT_COUNTRY_CODE: str = "SA"
     ARAMEX_API_URL: str = "https://ws.aramex.net/ShippingAPI.V2"
 
+    # Shipper (store) details for shipment creation
+    SHIPPER_NAME: str = "Wakkiez"
+    SHIPPER_PHONE: str = ""
+    SHIPPER_CITY: str = "Riyadh"
+    SHIPPER_ADDRESS: str = ""
+    SHIPPER_COUNTRY: str = "SA"
+
     # SMSA (Phase 6)
     SMSA_API_KEY: str = ""
     SMSA_PASSKEY: str = ""

@@ -114,6 +114,18 @@ async def _handle_order_created(data: dict):
         return
 
     customer = data.get("customer", {})
+    customer_name = str(customer.get("full_name") or customer.get("name") or customer.get("first_name") or "Unknown")
+    customer_phone = str(customer.get("mobile") or customer.get("phone") or "")
+    customer_city = str(customer.get("city") or "")
+
+    # Extract address from receiver
+    receiver = data.get("receiver") or {}
+    customer_address = str(receiver.get("street", "") or receiver.get("address", "") or "")
+    customer_district = str(receiver.get("district", "") or "")
+    customer_postal_code = str(receiver.get("postal_code", "") or receiver.get("zip", "") or "")
+    if not customer_city and receiver.get("city"):
+        customer_city = str(receiver["city"])
+
     shipping = data.get("shipping", {})
     shipping_company = (shipping.get("company", {}).get("name", "") or "").lower()
 
@@ -134,9 +146,12 @@ async def _handle_order_created(data: dict):
         data={
             "create": {
                 "salla_order_id": salla_id,
-                "customer_name": customer.get("name", customer.get("first_name", "Unknown")),
-                "customer_phone": customer.get("mobile", customer.get("phone", "")),
-                "customer_city": customer.get("city", ""),
+                "customer_name": customer_name,
+                "customer_phone": customer_phone,
+                "customer_city": customer_city,
+                "customer_address": customer_address or None,
+                "customer_district": customer_district or None,
+                "customer_postal_code": customer_postal_code or None,
                 "total_amount": total_amount,
                 "status": _map_salla_status(status_name),
                 "courier": courier,
@@ -144,9 +159,12 @@ async def _handle_order_created(data: dict):
                 "salla_status": status_name,
             },
             "update": {
-                "customer_name": customer.get("name", customer.get("first_name", "Unknown")),
-                "customer_phone": customer.get("mobile", customer.get("phone", "")),
-                "customer_city": customer.get("city", ""),
+                "customer_name": customer_name,
+                "customer_phone": customer_phone,
+                "customer_city": customer_city,
+                "customer_address": customer_address or None,
+                "customer_district": customer_district or None,
+                "customer_postal_code": customer_postal_code or None,
                 "total_amount": total_amount,
                 "status": _map_salla_status(status_name),
                 "courier": courier,

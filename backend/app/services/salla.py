@@ -163,6 +163,20 @@ async def sync_orders_from_salla(page: int = 1) -> dict:
         salla_id = str(salla_order["id"])
         customer = salla_order.get("customer", {})
 
+        # Extract customer fields — Salla uses full_name/mobile (int)
+        customer_name = str(customer.get("full_name") or customer.get("name") or customer.get("first_name") or "Unknown")
+        customer_phone = str(customer.get("mobile") or customer.get("phone") or "")
+        customer_city = str(customer.get("city") or "")
+
+        # Extract address from receiver or shipping address
+        receiver = salla_order.get("receiver") or {}
+        customer_address = str(receiver.get("street", "") or receiver.get("address", "") or "")
+        customer_district = str(receiver.get("district", "") or "")
+        customer_postal_code = str(receiver.get("postal_code", "") or receiver.get("zip", "") or "")
+        # Use receiver city if customer city is empty
+        if not customer_city and receiver.get("city"):
+            customer_city = str(receiver["city"])
+
         # Determine courier from shipping company
         shipping = salla_order.get("shipping", {})
         shipping_company = (shipping.get("company", {}).get("name", "") or "").lower()
@@ -180,26 +194,36 @@ async def sync_orders_from_salla(page: int = 1) -> dict:
         # Get AWB
         awb = shipping.get("tracking_number") or shipping.get("awb")
 
+        # Parse total amount
+        total_raw = salla_order.get("total", {})
+        total_amount = float(total_raw.get("amount", 0)) if isinstance(total_raw, dict) else float(total_raw or 0)
+
         # Upsert order
         order = await db.order.upsert(
             where={"salla_order_id": salla_id},
             data={
                 "create": {
                     "salla_order_id": salla_id,
-                    "customer_name": customer.get("name", customer.get("first_name", "Unknown")),
-                    "customer_phone": customer.get("mobile", customer.get("phone", "")),
-                    "customer_city": customer.get("city", ""),
-                    "total_amount": float(salla_order.get("total", {}).get("amount", 0)) if isinstance(salla_order.get("total"), dict) else float(salla_order.get("total", 0)),
+                    "customer_name": customer_name,
+                    "customer_phone": customer_phone,
+                    "customer_city": customer_city,
+                    "customer_address": customer_address or None,
+                    "customer_district": customer_district or None,
+                    "customer_postal_code": customer_postal_code or None,
+                    "total_amount": total_amount,
                     "status": status,
                     "courier": courier,
                     "awb_number": awb,
                     "salla_status": status_name,
                 },
                 "update": {
-                    "customer_name": customer.get("name", customer.get("first_name", "Unknown")),
-                    "customer_phone": customer.get("mobile", customer.get("phone", "")),
-                    "customer_city": customer.get("city", ""),
-                    "total_amount": float(salla_order.get("total", {}).get("amount", 0)) if isinstance(salla_order.get("total"), dict) else float(salla_order.get("total", 0)),
+                    "customer_name": customer_name,
+                    "customer_phone": customer_phone,
+                    "customer_city": customer_city,
+                    "customer_address": customer_address or None,
+                    "customer_district": customer_district or None,
+                    "customer_postal_code": customer_postal_code or None,
+                    "total_amount": total_amount,
                     "status": status,
                     "courier": courier,
                     "awb_number": awb,

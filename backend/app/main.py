@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import connect_db, disconnect_db
-from app.routers import analytics, auth, courier, handover, orders, returns, salla, users
+from app.routers import analytics, auth, courier, handover, orders, returns, salla, shipments, users
 
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.include_router(handover.router)
 app.include_router(courier.router)
 app.include_router(analytics.router)
 app.include_router(returns.router)
+app.include_router(shipments.router)
 
 
 @app.get("/health")
